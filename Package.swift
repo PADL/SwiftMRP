@@ -112,6 +112,7 @@ let CommonPackageDependencies: [Package.Dependency] = [
   .package(url: "https://github.com/PADL/SocketAddress", from: "0.0.1"),
   .package(url: "https://github.com/lhoward/AsyncExtensions", from: "0.9.2"),
   .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "2.3.0"),
+  .package(url: "https://github.com/ChimeHQ/JSONRPC.git", from: "0.9.2"),
 ]
 
 let CommonProducts: [Product] = [
@@ -148,11 +149,26 @@ let CommonTargets: [Target] = [
       "AsyncExtensions",
       "SocketAddress",
       "PMC",
+      "MRPControlProtocol",
       .product(name: "Algorithms", package: "swift-algorithms"),
       .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
       .product(name: "Logging", package: "swift-log"),
       .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
       .product(name: "SystemPackage", package: "swift-system"),
+    ] + PlatformTargetDependencies,
+    cSettings: PlatformCSettings,
+    swiftSettings: PlatformSwiftSettings,
+    linkerSettings: PlatformLinkerSettings
+  ),
+  .target(
+    name: "MRPControlProtocol",
+    dependencies: [
+      "IEEE802",
+      "AsyncExtensions",
+      "SocketAddress",
+      .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+      .product(name: "SystemPackage", package: "swift-system"),
+      "JSONRPC",
     ] + PlatformTargetDependencies,
     cSettings: PlatformCSettings,
     swiftSettings: PlatformSwiftSettings,
