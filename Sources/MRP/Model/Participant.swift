@@ -243,6 +243,18 @@ public final actor Participant<A: Application>: Equatable, Hashable, CustomStrin
     }
   }
 
+  private func _applyDeferredRegistrarChanges(
+    event: ProtocolEvent,
+    eventSource: EventSource
+  ) async throws {
+    try await _apply { attributeValue in
+      try await attributeValue.handleDeferredRegistrarChanges(
+        event: event,
+        eventSource: eventSource
+      )
+    }
+  }
+
   private func _txOpportunity(eventSource: EventSource) async throws {
     // this will send a .tx/.txLA event to all attributes which will then make
     // the appropriate state transitions, potentially triggering the encoding
@@ -251,6 +263,8 @@ public final actor Participant<A: Application>: Equatable, Hashable, CustomStrin
     case .Active:
       // encode attributes first with current registrar states, then process LeaveAll
       try await _apply(event: .txLA, eventSource: eventSource)
+      // now process deferred registrar state changes for txLA
+      try await _applyDeferredRegistrarChanges(event: .txLA, eventSource: eventSource)
       // sets LeaveAll to passive and emits sLA action
       try await _handleLeaveAll(event: .tx, eventSource: eventSource)
     case .Passive:
@@ -869,6 +883,30 @@ Sendable, Hashable, Equatable,
     precondition(!(unwrappedValue is AnyValue))
     participant._logger.trace("\(participant): handling \(context)")
     try await _handleApplicant(context: context) // attribute subtype can be adjusted by hook
+    // for txLA events, defer registrar state changes until after applicant encoding
+    if event != .txLA {
+      try await _handleRegistrar(context: context)
+    }
+  }
+
+  func handleDeferredRegistrarChanges(
+    event: ProtocolEvent,
+    eventSource: EventSource
+  ) async throws {
+    guard let participant else { throw MRPError.internalError }
+
+    let context = try await EventContext(
+      participant: participant,
+      event: event,
+      eventSource: eventSource,
+      attributeType: attributeType,
+      attributeSubtype: attributeSubtype,
+      attributeValue: unwrappedValue,
+      smFlags: participant._getSmFlags(for: attributeType),
+      applicant: applicant,
+      registrar: registrar
+    )
+
     try await _handleRegistrar(context: context)
   }
 
